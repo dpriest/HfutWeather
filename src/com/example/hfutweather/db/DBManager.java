@@ -15,7 +15,8 @@ import com.example.hfutweather.R;
 public class DBManager {
 	private final int BUFFER_SIZE = 400000;
 	private static final String PACKAGE_NAME = "com.example.hfutweather";
-	public static final String DB_NAME = "china_city_name.db";
+	public static final String DB_City_NAME = "china_city_name.db";
+	public static final String DB_City_NUM = "db_weather.db";
 	public static final String DB_PATH = "/data" + Environment.getDataDirectory().getAbsolutePath() + "/" + PACKAGE_NAME ; // 存放路径
 	private Context mContext;
 	private SQLiteDatabase database;
@@ -28,10 +29,10 @@ public class DBManager {
 	/**
 	 * 被调用方法
 	 */
-	public void openDateBase()
+	public void openDataBase()
 	{
-		this.database = this.openDateBase(DB_PATH + "/" + DB_NAME);
-
+		this.database = this.openDataBase(DB_PATH + "/" + DB_City_NAME, R.raw.china_city_name);
+		this.database = this.openDataBase(DB_PATH + "/" + DB_City_NUM, R.raw.db_weather);
 	}
 
 	/**
@@ -41,14 +42,14 @@ public class DBManager {
 	 * @return SQLiteDatabase
 	 * @author sy
 	 */
-	private SQLiteDatabase openDateBase(String dbFile)
+	private SQLiteDatabase openDataBase(String dbFile, int resource)
 	{
 		File file = new File(dbFile);
 		// 初始化数据库
 		if (!file.exists())
 		{
 			// // 打开raw中得数据库文件，获得stream流
-			InputStream stream = this.mContext.getResources().openRawResource(R.raw.china_city_name);
+			InputStream stream = this.mContext.getResources().openRawResource(resource);
 			try
 			{
 

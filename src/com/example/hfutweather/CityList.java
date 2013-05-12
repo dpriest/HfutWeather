@@ -49,9 +49,9 @@ public class CityList extends Activity {
 		mCityList = (ListView) findViewById(R.id.city_list);
 		letterListView = (MyLetterListView)findViewById(R.id.cityLetterListView);
 		DBManager dbManager = new DBManager(this);
-		dbManager.openDateBase();
+		dbManager.openDataBase();
 		dbManager.closeDatabase();
-		database = SQLiteDatabase.openOrCreateDatabase(DBManager.DB_PATH + "/" + DBManager.DB_NAME, null);
+		database = SQLiteDatabase.openOrCreateDatabase(DBManager.DB_PATH + "/" + DBManager.DB_City_NAME, null);
 		mCityNames = getCityNames();
 		letterListView.setOnTouchingLetterChangedListener(new LetterListViewListener());
 		alphaIndexer = new HashMap<String, Integer>();
@@ -66,6 +66,7 @@ public class CityList extends Activity {
 		@Override
 		public void onItemClick(AdapterView<?> arg0, View arg1, int pos, long arg3) {
 			CityModel cityModel = (CityModel)mCityList.getAdapter().getItem(pos);
+			String cityCode = getCityCodeByName(cityModel.getCityName());
 			Toast.makeText(CityList.this, cityModel.getCityName(), Toast.LENGTH_SHORT).show();
 		}
 	}
@@ -78,6 +79,18 @@ public class CityList extends Activity {
 		}
 	}
 	
+
+	public String getCityCodeByName(String cityName) {
+		Cursor cursor = database.rawQuery("select city_num from citys where name = '" + cityName + "'", null);
+		for (int i = 0; i <cursor.getCount(); i++) {
+			cursor.moveToPosition(i);
+			CityModel cityModel = new CityModel();
+			cityModel.setCityName(cursor.getString(cursor.getColumnIndex("CityName")));
+			cityModel.setNameSort(cursor.getString(cursor.getColumnIndex("NameSort")));
+			names.add(cityModel);
+		}
+		return names;
+	}
 
 	private class ListAdapter extends BaseAdapter
 	{
