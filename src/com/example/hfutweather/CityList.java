@@ -6,6 +6,7 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.PixelFormat;
@@ -51,8 +52,9 @@ public class CityList extends Activity {
 		DBManager dbManager = new DBManager(this);
 		dbManager.openDataBase();
 		dbManager.closeDatabase();
-		database = SQLiteDatabase.openOrCreateDatabase(DBManager.DB_PATH + "/" + DBManager.DB_City_NAME, null);
+		database = SQLiteDatabase.openOrCreateDatabase(DBManager.DB_PATH + "/" + DBManager.DB_City_NUM, null);
 		mCityNames = getCityNames();
+		
 		letterListView.setOnTouchingLetterChangedListener(new LetterListViewListener());
 		alphaIndexer = new HashMap<String, Integer>();
 		handler = new Handler();
@@ -66,8 +68,12 @@ public class CityList extends Activity {
 		@Override
 		public void onItemClick(AdapterView<?> arg0, View arg1, int pos, long arg3) {
 			CityModel cityModel = (CityModel)mCityList.getAdapter().getItem(pos);
-			String cityCode = getCityCodeByName(cityModel.getCityName());
-			Toast.makeText(CityList.this, cityModel.getCityName(), Toast.LENGTH_SHORT).show();
+			Intent cityIntent = new Intent();
+			cityIntent.putExtra("name", cityModel.getCityName());
+			cityIntent.putExtra("num", cityModel.getCityNum());
+			setResult(RESULT_OK, cityIntent);
+			finish();
+			return ;
 		}
 	}
 
@@ -77,19 +83,6 @@ public class CityList extends Activity {
 			adapter = new ListAdapter(this, list);
 			mCityList.setAdapter(adapter);
 		}
-	}
-	
-
-	public String getCityCodeByName(String cityName) {
-		Cursor cursor = database.rawQuery("select city_num from citys where name = '" + cityName + "'", null);
-		for (int i = 0; i <cursor.getCount(); i++) {
-			cursor.moveToPosition(i);
-			CityModel cityModel = new CityModel();
-			cityModel.setCityName(cursor.getString(cursor.getColumnIndex("CityName")));
-			cityModel.setNameSort(cursor.getString(cursor.getColumnIndex("NameSort")));
-			names.add(cityModel);
-		}
-		return names;
 	}
 
 	private class ListAdapter extends BaseAdapter
@@ -109,12 +102,12 @@ public class CityList extends Activity {
 			{
 				// 当前汉语拼音首字母
 				// getAlpha(list.get(i));
-				String currentStr = list.get(i).getNameSort();
+				String currentStr = list.get(i).getProvince();
 				// 上一个汉语拼音首字母，如果不存在为“ ”
-				String previewStr = (i - 1) >= 0 ? list.get(i - 1).getNameSort() : " ";
+				String previewStr = (i - 1) >= 0 ? list.get(i - 1).getProvince() : " ";
 				if (!previewStr.equals(currentStr))
 				{
-					String name = list.get(i).getNameSort();
+					String name = list.get(i).getProvince();
 					alphaIndexer.put(name, i);
 					sections[i] = name;
 				}
@@ -157,8 +150,8 @@ public class CityList extends Activity {
 			}
 
 			holder.name.setText(list.get(position).getCityName());
-			String currentStr = list.get(position).getNameSort();
-			String previewStr = (position - 1) >= 0 ? list.get(position - 1).getNameSort() : " ";
+			String currentStr = list.get(position).getProvince();
+			String previewStr = (position - 1) >= 0 ? list.get(position - 1).getProvince() : " ";
 			if (!previewStr.equals(currentStr))
 			{
 				holder.alpha.setVisibility(View.VISIBLE);
@@ -191,12 +184,19 @@ public class CityList extends Activity {
 
 	private ArrayList<CityModel> getCityNames() {
 		ArrayList<CityModel> names = new ArrayList<CityModel>();
-		Cursor cursor = database.rawQuery("select * from T_City ORDER BY NameSort", null);
+		HashMap<Integer, String> provinceMap = new HashMap<Integer, String>();
+		Cursor cursor = database.rawQuery("SELECT * FROM provinces order by _id", null);
+		for (int i = 0; i < cursor.getCount(); i++) {
+			cursor.moveToPosition(i);
+			provinceMap.put(cursor.getInt(cursor.getColumnIndex("_id")), cursor.getString(cursor.getColumnIndex("name")));
+		}
+		cursor = database.rawQuery("SELECT * FROM citys order by _id", null);
 		for (int i = 0; i <cursor.getCount(); i++) {
 			cursor.moveToPosition(i);
 			CityModel cityModel = new CityModel();
-			cityModel.setCityName(cursor.getString(cursor.getColumnIndex("CityName")));
-			cityModel.setNameSort(cursor.getString(cursor.getColumnIndex("NameSort")));
+			cityModel.setCityName(cursor.getString(cursor.getColumnIndex("name")));
+			cityModel.setCityNum(cursor.getString(cursor.getColumnIndex("city_num")));
+			cityModel.setProvince(provinceMap.get(cursor.getInt(cursor.getColumnIndex("province_id"))+1));
 			names.add(cityModel);
 		}
 		return names;

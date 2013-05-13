@@ -29,6 +29,10 @@
             android:name="com.example.hfutweather.CityList"
             android:label="@string/title_activity_city_list" >
         </activity>
+        <activity
+            android:name="com.example.hfutweather.DelCityActivity"
+            android:label="@string/title_activity_del_city" >
+        </activity>
     </application>
 
 </manifest>

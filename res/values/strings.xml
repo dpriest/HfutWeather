@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">HfutWeather</string>
+    <string name="app_name">合工大天气</string>
+    <string name="title_activity_city_list">城市列表</string>
     <string name="action_settings">Settings</string>
     <string name="text_info">请刷新天气</string>
     <string name="text_informer">国家气象局天气</string>
@@ -12,7 +13,8 @@
     <string name="shidu">湿度：</string>
     <string name="time">更新时间：</string>
     <string name="add_city">添加城市</string>
-    <string name="title_activity_city_list">CityList</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="del_city">删除城市</string>
+    <string name="title_activity_del_city">删除城市</string>
+    <string name="submit">确定</string>
 
 </resources>

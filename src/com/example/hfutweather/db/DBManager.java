@@ -31,7 +31,7 @@ public class DBManager {
 	 */
 	public void openDataBase()
 	{
-		this.database = this.openDataBase(DB_PATH + "/" + DB_City_NAME, R.raw.china_city_name);
+//		this.database = this.openDataBase(DB_PATH + "/" + DB_City_NAME, R.raw.china_city_name);
 		this.database = this.openDataBase(DB_PATH + "/" + DB_City_NUM, R.raw.db_weather);
 	}
 

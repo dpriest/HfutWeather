@@ -1,8 +1,14 @@
 package com.example.hfutweather;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 import org.apache.http.HttpResponse;
@@ -20,6 +26,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,12 +38,18 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.hfutweather.cache.CityCache;
+import com.example.hfutweather.db.DBCity;
+
 public class MainActivity extends Activity {
 	protected static final String TAG = "MainActivity";
-	private String[] city = {"合肥", "北京", "上海"};
+	private ArrayList<String> city = new ArrayList<String>();
 	private Spinner spinner;
 	private TextView outText;
 	private SharedPreferences settings = null;
+	private int addCityCode = 1;
+	private int delCityCode = 2;
+	public CityCache cityCache;
 	
 	public boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getApplicationContext()
@@ -49,28 +62,39 @@ public class MainActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		
 		spinner = (Spinner)findViewById(R.id.spinner);
 		outText = (TextView) findViewById(R.id.info);
-		
 
 		settings  = getSharedPreferences(WeatherAsync.PREFS_NAME, 0);
-	    String json = settings.getString(getUrlByPosition(0), "");
-	    if (json != "") {
-			try {
-				JSONObject jsonObject = new JSONObject(json);
-				fillWeatherInfo(jsonObject);
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-	    }
+		cityCache = new CityCache(MainActivity.this);
+		city = cityCache.read();
 		
+		if (city.size() == 0) {
+			startActivityForResult(new Intent(MainActivity.this, CityList.class), addCityCode );
+		} else {
+		
+		    String json = settings.getString(getUrlByPosition(0), "");
+		    if (json != "") {
+				try {
+					JSONObject jsonObject = new JSONObject(json);
+					fillWeatherInfo(jsonObject);
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		    }
+			loadCityList();
+		}
+		
+		find_and_modif_button();
+	}
+
+	private void loadCityList() {
 		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, city);
 		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		spinner.setAdapter(adapter);
-		spinner.setPrompt("请选择城市");
 		spinner.setSelection(0);
+		spinner.setPrompt("请选择城市");
 		
 		spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 		    @Override
@@ -86,10 +110,7 @@ public class MainActivity extends Activity {
 		    }
 
 		});
-		
-		find_and_modif_button();
 	}
-
 	private void find_and_modif_button() {
 		Button btnRef = (Button)findViewById(R.id.refresh);
 		btnRef.setOnClickListener(oclbtnRef);
@@ -106,6 +127,7 @@ public class MainActivity extends Activity {
 				WeatherAsync async = new WeatherAsync(MainActivity.this);
 				async.refresh = true;
 				String url = getUrlByPosition(spinner.getSelectedItemPosition());
+				Log.v(TAG, url);
 				async.execute(url);
 			}
 		}
@@ -120,23 +142,66 @@ public class MainActivity extends Activity {
 
 	protected String getUrlByPosition(int selectedItemPosition) {
 		String url = "";
-		switch(selectedItemPosition) {
-		case 0:
-			url = "http://www.weather.com.cn/data/sk/101220101.html";
-			break;
-		case 1:
-			url = "http://www.weather.com.cn/data/sk/101010100.html";
-			break;
-		case 2:
-			url = "http://www.weather.com.cn/data/sk/101020100.html";
-			break;
-		default:
-			url = "http://www.weather.com.cn/data/sk/101220101.html";
-			break;
-		}
+		DBCity dbCity = new DBCity();
+		String cityNum = dbCity.getNumByName(city.get(selectedItemPosition));
+		url = "http://www.weather.com.cn/data/sk/"+ cityNum +".html";
 		return url;
 	}
 
+
+	public void fillWeatherInfo(JSONObject jsonData) {
+		WeatherObj weatherObj = new WeatherObj(jsonData);
+		TextView outTextView;
+		outTextView = (TextView) findViewById(R.id.info);
+		outTextView.setText(weatherObj.toString());
+	}
+	
+	// 菜单
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		if (item.getItemId() == R.id.add_city) {
+			startActivityForResult(new Intent(MainActivity.this, CityList.class), addCityCode);
+		} else if(item.getItemId() == R.id.del_city) {
+			startActivityForResult(new Intent(MainActivity.this, DelCityActivity.class), delCityCode);
+		}
+		return true;
+	}
+	
+	// 处理选择城市的结果
+	protected void onActivityResult(int requestCode, 
+			int resultCode, Intent outputIntent) {
+		super.onActivityResult(requestCode, resultCode, outputIntent);
+		parseResult(this, requestCode, resultCode, outputIntent);
+	}
+
+	private void parseResult(MainActivity mainActivity, int requestCode,
+			int resultCode, Intent outputIntent) {
+		if (requestCode == addCityCode) {
+			if (resultCode != Activity.RESULT_OK) {
+				Log.d(TAG, "Result code is not ok");
+				return ;
+			}
+			Bundle extras = outputIntent.getExtras();
+			if (!city.contains(extras.getString("name"))) {
+				city.add(extras.getString("name"));
+			    
+				cityCache.save(city);
+				
+				if (city.size() == 1) {
+					loadCityList();
+				}
+			}
+		} else if (requestCode == delCityCode) {
+			city = cityCache.read(); 
+			if (city.size() == 0) {
+				startActivityForResult(new Intent(MainActivity.this, CityList.class), addCityCode);
+			}
+			ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, city);
+			adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+			spinner.setAdapter(adapter);
+		}
+//		Toast.makeText(MainActivity.this, extras.getString("name") + extras.getString("num"), Toast.LENGTH_SHORT).show();
+	}
 
 	public class WeatherAsync extends AsyncTask<String, Void, JSONObject> {
 	
@@ -171,7 +236,8 @@ public class MainActivity extends Activity {
 				SimpleDateFormat sdf = new SimpleDateFormat("MM月dd日");
 				String currentDate = sdf.format(new Date());
 				weatherInfo.put("date", currentDate);
-
+				
+				// 缓存天气信息
 			    SharedPreferences.Editor editor = settings.edit();
 			    editor.putString(params[0], weatherInfo.toString());
 			    editor.commit();
@@ -195,21 +261,6 @@ public class MainActivity extends Activity {
 			dialog.show();
 			super.onPreExecute();
 		}
-	
 	}
 
-
-	public void fillWeatherInfo(JSONObject jsonData) {
-		WeatherObj weatherObj = new WeatherObj(jsonData);
-		TextView outTextView;
-		outTextView = (TextView) findViewById(R.id.info);
-		outTextView.setText(weatherObj.toString());
-	}
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		if (item.getItemId() == R.id.add_city) {
-			startActivity(new Intent(MainActivity.this, CityList.class));
-		}
-		return true;
-	}
 }

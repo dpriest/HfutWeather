@@ -11,7 +11,7 @@ import android.view.View;
 
 public class MyLetterListView extends View {
 	OnTouchingLetterChangedListener onTouchingLetterChangedListener;
-	String[] b = { "#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+	String[] b = { "#", "北京", "上海", "天津", "重庆", "黑龙江", "吉林", "辽宁", "内蒙古", "河北", "山西", "陕西", "山东", "新疆", "西藏", "青海", "甘肃", "宁夏", "河南", "江苏", "湖北", "浙江", "安徽", "福建", "江西", "湖南", "贵州", "四川", "广东", "云南", "广西", "海南", "香港", "澳门", "台湾" };
 	int choose = -1;
 	Paint paint = new Paint();
 	boolean showBkg = false;
