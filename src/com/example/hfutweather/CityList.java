@@ -12,8 +12,11 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
@@ -21,15 +24,15 @@ import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.BaseAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.hfutweather.db.DBManager;
 import com.example.hfutweather.view.MyLetterListView;
 import com.example.hfutweather.view.MyLetterListView.OnTouchingLetterChangedListener;
 
-public class CityList extends Activity {
+public class CityList extends Activity{
 
 	private BaseAdapter adapter;
 	private ListView mCityList;
@@ -41,6 +44,7 @@ public class CityList extends Activity {
 	private OverlayThread overlayThread;
 	private SQLiteDatabase database;
 	private ArrayList<CityModel> mCityNames;
+	private EditText ed;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -49,11 +53,11 @@ public class CityList extends Activity {
 		
 		mCityList = (ListView) findViewById(R.id.city_list);
 		letterListView = (MyLetterListView)findViewById(R.id.cityLetterListView);
-		DBManager dbManager = new DBManager(this);
-		dbManager.openDataBase();
-		dbManager.closeDatabase();
 		database = SQLiteDatabase.openOrCreateDatabase(DBManager.DB_PATH + "/" + DBManager.DB_City_NUM, null);
-		mCityNames = getCityNames();
+		ed = (EditText) findViewById(R.id.EditText01);
+		
+		ed.addTextChangedListener(new CitySearchListener());
+		mCityNames = getCityNames("");
 		
 		letterListView.setOnTouchingLetterChangedListener(new LetterListViewListener());
 		alphaIndexer = new HashMap<String, Integer>();
@@ -61,6 +65,7 @@ public class CityList extends Activity {
 		overlayThread = new OverlayThread();
 		initOverlay();
 		setAdapter(mCityNames);
+		mCityList.setTextFilterEnabled(true);
 		mCityList.setOnItemClickListener(new CityListOnItemClick());
 	}
 	
@@ -85,14 +90,11 @@ public class CityList extends Activity {
 		}
 	}
 
-	private class ListAdapter extends BaseAdapter
-	{
+	private class ListAdapter extends BaseAdapter {
 		private LayoutInflater inflater;
 		private List<CityModel> list;
 
-		public ListAdapter(Context context, List<CityModel> list)
-		{
-
+		public ListAdapter(Context context, List<CityModel> list) {
 			this.inflater = LayoutInflater.from(context);
 			this.list = list;
 			alphaIndexer = new HashMap<String, Integer>();
@@ -182,7 +184,7 @@ public class CityList extends Activity {
 		windowManager.addView(overlay, lp);
 	}
 
-	private ArrayList<CityModel> getCityNames() {
+	private ArrayList<CityModel> getCityNames(String cityFilter) {
 		ArrayList<CityModel> names = new ArrayList<CityModel>();
 		HashMap<Integer, String> provinceMap = new HashMap<Integer, String>();
 		Cursor cursor = database.rawQuery("SELECT * FROM provinces order by _id", null);
@@ -190,7 +192,13 @@ public class CityList extends Activity {
 			cursor.moveToPosition(i);
 			provinceMap.put(cursor.getInt(cursor.getColumnIndex("_id")), cursor.getString(cursor.getColumnIndex("name")));
 		}
-		cursor = database.rawQuery("SELECT * FROM citys order by _id", null);
+		String sql = "";
+		if (cityFilter.equals("")) {
+			sql = "SELECT * FROM citys order by _id";
+		} else {
+			sql = "SELECT * FROM citys where name like '%"+ cityFilter +"%' order by _id";
+		}
+		cursor = database.rawQuery(sql, null);
 		for (int i = 0; i <cursor.getCount(); i++) {
 			cursor.moveToPosition(i);
 			CityModel cityModel = new CityModel();
@@ -204,11 +212,11 @@ public class CityList extends Activity {
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.city_list, menu);
+		super.onCreateOptionsMenu(menu);
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.city_list, menu);
 		return true;
 	}
-
 
 	private class LetterListViewListener implements OnTouchingLetterChangedListener
 	{
@@ -229,6 +237,25 @@ public class CityList extends Activity {
 		}
 
 	}
+	private class CitySearchListener implements TextWatcher {
+
+		@Override
+		public void afterTextChanged(Editable arg0) {
+		}
+
+		@Override
+		public void beforeTextChanged(CharSequence arg0, int arg1, int arg2,
+				int arg3) {
+		}
+
+		@Override
+		public void onTextChanged(CharSequence arg0, int arg1, int arg2,
+				int arg3) {
+			mCityNames = getCityNames(ed.getText().toString());
+			setAdapter(mCityNames);
+		}
+		
+	}
 	private class OverlayThread implements Runnable
 	{
 
@@ -239,4 +266,16 @@ public class CityList extends Activity {
 		}
 
 	}
+
+//	@Override
+//	public boolean onQueryTextChange(String newText) {
+//		mStatusView.setText("Query = " + newText);
+//		return false;
+//	}
+//
+//	@Override
+//	public boolean onQueryTextSubmit(String query) {
+//		mStatusView.setText("Query = " + query + " : submitted");
+//		return false;
+//	}
 }

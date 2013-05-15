@@ -1,11 +1,6 @@
 package com.example.hfutweather;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -32,24 +27,21 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.hfutweather.cache.CityCache;
 import com.example.hfutweather.db.DBCity;
 
 public class MainActivity extends Activity {
 	protected static final String TAG = "MainActivity";
 	private ArrayList<String> city = new ArrayList<String>();
 	private Spinner spinner;
-	private TextView outText;
 	private SharedPreferences settings = null;
 	private int addCityCode = 1;
 	private int delCityCode = 2;
-	public CityCache cityCache;
+	private CityOperate cityOperate;
 	
 	public boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getApplicationContext()
@@ -63,36 +55,27 @@ public class MainActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		spinner = (Spinner)findViewById(R.id.spinner);
-		outText = (TextView) findViewById(R.id.info);
 
 		settings  = getSharedPreferences(WeatherAsync.PREFS_NAME, 0);
-		cityCache = new CityCache(MainActivity.this);
-		city = cityCache.read();
+		cityOperate = new CityOperate(MainActivity.this);
+		city = cityOperate.load();
 		
-		if (city.size() == 0) {
-			startActivityForResult(new Intent(MainActivity.this, CityList.class), addCityCode );
-		} else {
-		
-		    String json = settings.getString(getUrlByPosition(0), "");
-		    if (json != "") {
-				try {
-					JSONObject jsonObject = new JSONObject(json);
-					fillWeatherInfo(jsonObject);
-				} catch (JSONException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		    }
-			loadCityList();
-		}
+	    String json = settings.getString(getUrlByPosition(0), "");
+	    if (json != "") {
+			try {
+				JSONObject jsonObject = new JSONObject(json);
+				fillWeatherInfo(jsonObject);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	    }
+		loadCityList();
 		
 		find_and_modif_button();
 	}
 
 	private void loadCityList() {
-		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, city);
-		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-		spinner.setAdapter(adapter);
 		spinner.setSelection(0);
 		spinner.setPrompt("请选择城市");
 		
@@ -142,7 +125,7 @@ public class MainActivity extends Activity {
 
 	protected String getUrlByPosition(int selectedItemPosition) {
 		String url = "";
-		DBCity dbCity = new DBCity();
+		DBCity dbCity = new DBCity(MainActivity.this);
 		String cityNum = dbCity.getNumByName(city.get(selectedItemPosition));
 		url = "http://www.weather.com.cn/data/sk/"+ cityNum +".html";
 		return url;
@@ -159,11 +142,18 @@ public class MainActivity extends Activity {
 	// 菜单
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-		if (item.getItemId() == R.id.add_city) {
-			startActivityForResult(new Intent(MainActivity.this, CityList.class), addCityCode);
-		} else if(item.getItemId() == R.id.del_city) {
-			startActivityForResult(new Intent(MainActivity.this, DelCityActivity.class), delCityCode);
-		}
+	    switch(item.getItemId()) {
+	    case R.id.add_city:
+	    	startActivityForResult(new Intent(MainActivity.this, CityList.class), addCityCode);
+	    	break;
+	    case R.id.del_city:
+	    	startActivityForResult(new Intent(MainActivity.this, DelCityActivity.class), delCityCode);
+	    	break;
+	    case R.id.relocate:
+	    	cityOperate.relocate();
+			city = cityOperate.load();
+	    	break;
+	    }
 		return true;
 	}
 	
@@ -183,22 +173,11 @@ public class MainActivity extends Activity {
 			}
 			Bundle extras = outputIntent.getExtras();
 			if (!city.contains(extras.getString("name"))) {
-				city.add(extras.getString("name"));
-			    
-				cityCache.save(city);
-				
-				if (city.size() == 1) {
-					loadCityList();
-				}
+				cityOperate.add(extras.getString("name"));
+				city = cityOperate.load();
 			}
 		} else if (requestCode == delCityCode) {
-			city = cityCache.read(); 
-			if (city.size() == 0) {
-				startActivityForResult(new Intent(MainActivity.this, CityList.class), addCityCode);
-			}
-			ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, city);
-			adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-			spinner.setAdapter(adapter);
+			city = cityOperate.load();
 		}
 //		Toast.makeText(MainActivity.this, extras.getString("name") + extras.getString("num"), Toast.LENGTH_SHORT).show();
 	}

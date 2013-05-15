@@ -3,6 +3,12 @@
     android:layout_height="match_parent"
     android:orientation="vertical" >
 	
+	<EditText 
+		android:id="@+id/EditText01" 
+		android:layout_height="wrap_content" 
+		android:layout_width="fill_parent" 
+		android:hint="@string/search_hint">
+	</EditText>
     <RelativeLayout
     	android:id="@+id/city_layout"
         android:layout_width="fill_parent"
