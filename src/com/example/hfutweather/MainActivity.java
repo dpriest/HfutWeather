@@ -56,22 +56,14 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 		spinner = (Spinner)findViewById(R.id.spinner);
 
-		settings  = getSharedPreferences(WeatherAsync.PREFS_NAME, 0);
 		cityOperate = new CityOperate(MainActivity.this);
 		city = cityOperate.load();
 		
-	    String json = settings.getString(getUrlByPosition(0), "");
-	    if (json != "") {
-			try {
-				JSONObject jsonObject = new JSONObject(json);
-				fillWeatherInfo(jsonObject);
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-	    }
 		loadCityList();
-		
+
+		WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
+				getCityNumByPosition(0));
+		weatherObj.fillWeatherInfo((TextView) findViewById(R.id.info), false);
 		find_and_modif_button();
 	}
 
@@ -82,9 +74,10 @@ public class MainActivity extends Activity {
 		spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 		    @Override
 		    public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
-				WeatherAsync async = new WeatherAsync(MainActivity.this);
-				String url = getUrlByPosition(position);
-				async.execute(url);
+
+				WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
+						getCityNumByPosition(position));
+				weatherObj.fillWeatherInfo((TextView) findViewById(R.id.info), false);
 		    }
 
 		    @Override
@@ -107,11 +100,9 @@ public class MainActivity extends Activity {
 				Toast.makeText(MainActivity.this, "网络不可用", Toast.LENGTH_SHORT).show();
 			}
 			else {
-				WeatherAsync async = new WeatherAsync(MainActivity.this);
-				async.refresh = true;
-				String url = getUrlByPosition(spinner.getSelectedItemPosition());
-				Log.v(TAG, url);
-				async.execute(url);
+				WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
+						getCityNumByPosition(spinner.getSelectedItemPosition()));
+				weatherObj.fillWeatherInfo((TextView) findViewById(R.id.info), true);
 			}
 		}
 	};
@@ -123,20 +114,10 @@ public class MainActivity extends Activity {
 		return true;
 	}
 
-	protected String getUrlByPosition(int selectedItemPosition) {
+	protected String getCityNumByPosition(int selectedItemPosition) {
 		String url = "";
 		DBCity dbCity = new DBCity(MainActivity.this);
-		String cityNum = dbCity.getNumByName(city.get(selectedItemPosition));
-		url = "http://www.weather.com.cn/data/sk/"+ cityNum +".html";
-		return url;
-	}
-
-
-	public void fillWeatherInfo(JSONObject jsonData) {
-		WeatherObj weatherObj = new WeatherObj(jsonData);
-		TextView outTextView;
-		outTextView = (TextView) findViewById(R.id.info);
-		outTextView.setText(weatherObj.toString());
+		return dbCity.getNumByName(city.get(selectedItemPosition));
 	}
 	
 	// 菜单
@@ -178,67 +159,6 @@ public class MainActivity extends Activity {
 			}
 		} else if (requestCode == delCityCode) {
 			city = cityOperate.load();
-		}
-//		Toast.makeText(MainActivity.this, extras.getString("name") + extras.getString("num"), Toast.LENGTH_SHORT).show();
-	}
-
-	public class WeatherAsync extends AsyncTask<String, Void, JSONObject> {
-	
-		public static final String PREFS_NAME = "WeatherData";
-		public boolean refresh = false;
-		private Activity activity;
-		private ProgressDialog dialog;
-	
-		public WeatherAsync(Activity activity) {
-			this.activity = activity;
-			dialog = new ProgressDialog(activity);
-			dialog.setTitle("更新中");
-			dialog.setMessage("获取天气中...");
-		}
-	
-		@Override
-		protected JSONObject doInBackground(String... params) {
-		    String json = settings.getString(params[0], "");
-			try {
-			    if (json != "" && !refresh) {
-					JSONObject jsonObject = new JSONObject(json);
-					return jsonObject;
-			    }
-				DefaultHttpClient defaultClient = new DefaultHttpClient();
-				HttpGet httpGetRequest = new HttpGet(params[0]);
-				HttpResponse httpResponse = defaultClient.execute(httpGetRequest);
-				BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent(), "UTF-8"));
-				json = reader.readLine();
-			    
-				JSONObject jsonObject = new JSONObject(json);
-				JSONObject weatherInfo = (JSONObject)jsonObject.getJSONObject("weatherinfo");
-				SimpleDateFormat sdf = new SimpleDateFormat("MM月dd日");
-				String currentDate = sdf.format(new Date());
-				weatherInfo.put("date", currentDate);
-				
-				// 缓存天气信息
-			    SharedPreferences.Editor editor = settings.edit();
-			    editor.putString(params[0], weatherInfo.toString());
-			    editor.commit();
-				
-			    refresh = false;
-				return weatherInfo;
-			} catch (Exception e) {
-				e.printStackTrace();
-				return null;
-			}
-		}
-	
-		@Override
-		protected void onPostExecute(JSONObject jsonData) {
-			dialog.dismiss();
-			fillWeatherInfo(jsonData);
-		}
-	
-		@Override
-		protected void onPreExecute() {
-			dialog.show();
-			super.onPreExecute();
 		}
 	}
 
