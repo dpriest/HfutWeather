@@ -3,6 +3,8 @@ package com.example.hfutweather;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,145 +20,108 @@ import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.util.Log;
-import android.widget.TextView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.Toast;
 
 
 public class WeatherObj {
 	private static final String PREFS_NAME = "WeatherData";
+	private static final String DETAIL_NAME = "WeatherDataDetail";
 	private static final String DAY = "day";
-	private static final String PERIOD = "period";
+	private static final String DETAIL = "detail";
 	private static final String TAG = "WeatherObj";
-	public String city = "";
-	private String week;
-	private int[] date;
-	private String fchh;
-	private String temp1;
-	private String temp2;
-	private String temp3;
-	private String temp4;
-	private String temp5;
-	private String temp6;
-	private String weather1;
-	private String weather2;
-	private String weather3;
-	private String weather4;
-	private String weather5;
-	private String weather6;
-	private String img_title1;
-	private String img_title2;
-	private String img_title3;
-	private String img_title4;
-	private String img_title5;
-	private String img_title6;
-	private String img_title7;
-	private String img_title8;
-	private String img_title9;
-	private String img_title10;
-	private String img_title11;
-	private String img_title12;
-	private String wind1;
-	private String wind2;
-	private String wind3;
-	private String wind4;
-	private String wind5;
-	private String wind6;
-	private String fl1;
-	private String fl2;
-	private String fl3;
-	private String fl4;
-	private String fl5;
-	private String fl6;
-	private String index;
-	private String index_uv;
-	private String index_tr;
-	private String index_co;
-	private String index_cl;
-	private String index_xc;
-	private String index_d;
+	private int[] date = {0, 0};
+	
 	private Activity context;
 	private SharedPreferences settings;
+	private SharedPreferences detailCache;
 	private JSONObject dayJsonObject;
-	private JSONObject periodJsonObject;
 	private String temperature;
 	private String time;
 	private String cityid;
+	private int current_month;
+	private int current_day;
 	
+	// 初始化数据
 	public WeatherObj(Activity context, String cityCode) {
 		this.context = context;
 		settings  = context.getSharedPreferences(PREFS_NAME, 0);
+		detailCache  = context.getSharedPreferences(cityCode+DETAIL_NAME, 0);
 		cityid = cityCode;
-		String json1 = settings.getString(cityCode + DAY, "");
-		String json2 = settings.getString(cityCode + PERIOD, "");
+		Calendar rightNow = Calendar.getInstance();
+		current_month = rightNow.get(Calendar.MONTH) + 1;
+		current_day = rightNow.get(Calendar.DAY_OF_MONTH);
+	}
+
+	public void fillWeatherInfo(ListView listview, Boolean refresh) {
+		String json1 = settings.getString(cityid + DAY, "");
+		String dateString = detailCache.getString("date", "");
+		if (!dateString.equals("")) {
+			date = getMonthAndDay(dateString);
+		}
 		try {
 			dayJsonObject = new JSONObject(json1);
-			periodJsonObject = new JSONObject(json2);
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		if (isNetworkAvailable() == true && (refresh || dayJsonObject == null || date[0] == 0 )) {
+			WeatherAsync async = new WeatherAsync(context, listview);
+			async.refresh = true;
+			async.execute();
+		} else if (dayJsonObject != null && date[0] != 0 ) {
+			analysisData();
+			fillListviewWithList(listview, this.toStringArray());
+		} else {
+			ArrayList<String> data = new ArrayList<String>();
+	        data.add("暂无数据");
+			fillListviewWithList(listview, data);
+			Toast.makeText(context, "网络不可用", Toast.LENGTH_SHORT).show();
+		}
+	}
+
+	private ArrayList<String> toStringArray() {
+		ArrayList<String> context = new ArrayList<String>();
+		if (temperature == "") {
+			context.add("暂无数据");
+		} else {
+			context.add("当前温度:" + temperature + "°C");
+			context.add("更新时间:" + date[0] + "月" + date[1] + "日"+time);
+			JSONObject tempData;
+			// 从昨天开始
+			for(int i = -1; i <= 2; i++) {
+				String tempString = detailCache.getString(current_month + "/" +(current_day+i), "");
+				try {
+					tempData = new JSONObject(tempString);
+					if (tempData != null) {
+						context.add(current_month + "月" + (current_day+i) + "日" 
+								+ tempData.get("weather") + tempData.get("temp"));
+					}
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		return context;
+	}
+
+	private void fillListviewWithList(ListView listview, ArrayList<String> arrayList) {
+		ArrayAdapter<String> adapter = new ArrayAdapter(context, android.R.layout.simple_list_item_1, arrayList);
+		listview.setAdapter(adapter);
 	}
 
 	private void analysisData() {
 		try {
 			temperature = dayJsonObject.getString("temp").toString();
 			time = dayJsonObject.getString("time").toString();
-			// 设置城市名称 日期
-	        city = periodJsonObject.getString("city").toString();
-	        week = periodJsonObject.getString("week").toString();
-	        date = getMonthAndDay(periodJsonObject.getString("date_y").toString());
-	        fchh = periodJsonObject.getString("fchh").toString();
-	        // 1到6天的气温
-	        temp1 = periodJsonObject.getString("temp1").toString();
-	        temp2 = periodJsonObject.getString("temp2").toString();
-	        temp3 = periodJsonObject.getString("temp3").toString();
-	        temp4 = periodJsonObject.getString("temp4").toString();
-	        temp5 = periodJsonObject.getString("temp5").toString();
-	        temp6 = periodJsonObject.getString("temp6").toString();
-	        // 1到6天的天气
-	        weather1 = periodJsonObject.getString("weather1").toString();
-	        weather2 = periodJsonObject.getString("weather2").toString();
-	        weather3 = periodJsonObject.getString("weather3").toString();
-	        weather4 = periodJsonObject.getString("weather4").toString();
-	        weather5 = periodJsonObject.getString("weather5").toString();
-	        weather6 = periodJsonObject.getString("weather6").toString();
-	        // 天气情况的图片
-	        img_title1 = periodJsonObject.getString("img_title1").toString();
-	        img_title2 = periodJsonObject.getString("img_title2").toString();
-	        img_title3 = periodJsonObject.getString("img_title3").toString();
-	        img_title4 = periodJsonObject.getString("img_title4").toString();
-	        img_title5 = periodJsonObject.getString("img_title5").toString();
-	        img_title6 = periodJsonObject.getString("img_title6").toString();
-	        img_title7 = periodJsonObject.getString("img_title7").toString();
-	        img_title8 = periodJsonObject.getString("img_title8").toString();
-	        img_title9 = periodJsonObject.getString("img_title9").toString();
-	        img_title10 = periodJsonObject.getString("img_title10").toString();
-	        img_title11 = periodJsonObject.getString("img_title11").toString();
-	        img_title12 = periodJsonObject.getString("img_title12").toString();
-	        // 1到6天的风况
-	        wind1 = periodJsonObject.getString("wind1").toString();
-	        wind2 = periodJsonObject.getString("wind2").toString();
-	        wind3 = periodJsonObject.getString("wind3").toString();
-	        wind4 = periodJsonObject.getString("wind4").toString();
-	        wind5 = periodJsonObject.getString("wind5").toString();
-	        wind6 = periodJsonObject.getString("wind6").toString();
-	        // 1到6天的风力
-	        fl1 = periodJsonObject.getString("fl1").toString();
-	        fl2 = periodJsonObject.getString("fl2").toString();
-	        fl3 = periodJsonObject.getString("fl3").toString();
-	        fl4 = periodJsonObject.getString("fl4").toString();
-	        fl5 = periodJsonObject.getString("fl5").toString();
-	        fl6 = periodJsonObject.getString("fl6").toString();
-	        // 各种天气指数
-	        index = periodJsonObject.getString("index").toString();
-	        index_uv = periodJsonObject.getString("index_uv").toString();
-	        index_tr = periodJsonObject.getString("index_tr").toString();
-	        index_co = periodJsonObject.getString("index_co").toString();
-	        index_cl = periodJsonObject.getString("index_cl").toString();
-	        index_xc = periodJsonObject.getString("index_xc").toString();
-	        index_d = periodJsonObject.getString("index_d").toString();
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -177,14 +142,27 @@ public class WeatherObj {
 	@Override
 	public String toString() {
 		String context = "";
-		if (city == "") {
+		if (temperature == "") {
 			context = "暂无数据";
 		} else {
+			
 			context += "当前温度:" + temperature + "°C\n"
-					+ "更新时间:" + date[0] + "月" + date[1] + "日"+time + "\n"
-					+ date[0] + "月" + date[1] + "日" + weather1 + temp1 + "\n"
-					+ date[0] + "月" + (date[1]+1) + "日" + weather2 + temp2 + "\n"
-					+ date[0] + "月" + (date[1]+2) + "日" + weather3 + temp3 + "\n";
+					+ "更新时间:" + date[0] + "月" + date[1] + "日"+time + "\n";
+			JSONObject tempData;
+			// 从昨天开始
+			for(int i = -1; i <= 2; i++) {
+				String tempString = detailCache.getString(current_month + "/" +(current_day+i), "");
+				try {
+					tempData = new JSONObject(tempString);
+					if (tempData != null) {
+						context = context + current_month + "月" + (current_day+i) + "日" 
+								+ tempData.get("weather") + tempData.get("temp") + "\n";
+					}
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 		}
 		return context;
 	}
@@ -194,11 +172,11 @@ public class WeatherObj {
 		public boolean refresh = false;
 		private ProgressDialog dialog;
 		private DefaultHttpClient client;
-		private TextView outTextView;
+		private ListView outTextView;
 	
-		public WeatherAsync(Activity activity, TextView outTextView) {
+		public WeatherAsync(Activity activity, ListView listview) {
 			dialog = new ProgressDialog(activity);
-			this.outTextView = outTextView;
+			this.outTextView = listview;
 			dialog.setTitle("更新中");
 			dialog.setMessage("获取天气中...");
 		}
@@ -211,12 +189,10 @@ public class WeatherObj {
 				HttpConnectionParams.setSoTimeout(httpParams, TIMEOUT_MILLISEC);
 				client = new DefaultHttpClient(httpParams);
 				dayJsonObject = getAndSaveJson(cityid, DAY);
-				Long last = System.currentTimeMillis()/1000 - settings.getLong(cityid + PERIOD + "time", 0);
-				if (periodJsonObject == null || (refresh && (last > 3600))) {
-					JSONObject temp = getAndSaveJson(cityid, PERIOD);
-					if (!temp.equals(null)) {
-						periodJsonObject = temp;
-					}
+				Long last = System.currentTimeMillis()/1000 - settings.getLong(cityid + DETAIL + "time", 0);
+				// 需要重新获取详细天气信息
+				if (date[0] == 0 || (refresh && (last > 3600))) {
+					getAndSaveJson(cityid, DETAIL);
 				}
 				return true;
 			} catch (Exception e) {
@@ -230,7 +206,7 @@ public class WeatherObj {
 			String json = "";
 			if (type.equals(DAY)) {
 				url = "http://www.weather.com.cn/data/sk/"+cityCode+".html";
-			} else if (type.equals(PERIOD)) {
+			} else if (type.equals(DETAIL)) {
 				url = "http://113.108.239.107/data/"+cityCode+".html";
 			}
 			try {
@@ -239,12 +215,13 @@ public class WeatherObj {
 			    
 				JSONObject jsonObject = new JSONObject(json);
 				JSONObject weatherInfo = (JSONObject)jsonObject.getJSONObject("weatherinfo");
+
+				if (type.equals(DAY)) {
+					cacheDirect(weatherInfo);
+				} else if (type.equals(DETAIL)) {
+					cacheByDay(weatherInfo);
+				}
 				
-				// 缓存天气信息
-			    SharedPreferences.Editor editor = settings.edit();
-			    editor.putString(cityCode + type, weatherInfo.toString());
-			    editor.putLong(cityCode + type + "time", System.currentTimeMillis()/1000);
-			    editor.commit();
 				return weatherInfo;
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -253,6 +230,38 @@ public class WeatherObj {
 			
 		    refresh = false;
 		    return null;
+		}
+
+		private void cacheByDay(JSONObject weatherInfo) {
+			// 缓存天气信息
+		    SharedPreferences.Editor editor = detailCache.edit();
+			try {
+				// 获取昨天的天气
+				String yesterday = detailCache.getString(current_month + "/" +(current_day-1), "");
+				// 先清除缓存，防止缓存冗余
+				editor.clear();
+				editor.putString("date", weatherInfo.getString("date_y").toString());
+				editor.putString(current_month + "/" +(current_day-1), yesterday);
+				date = getMonthAndDay(weatherInfo.getString("date_y").toString());
+				for ( int i = 1; i <= 6; i++ ) {
+					JSONObject tempData = new JSONObject();
+					tempData.put("weather", weatherInfo.getString("weather"+i).toString());
+					tempData.put("temp", weatherInfo.getString("temp"+i).toString());
+					editor.putString(date[0] + "/" + (date[1] + i-1), tempData.toString());
+				}
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		    editor.commit();
+		}
+
+		private void cacheDirect(JSONObject weatherInfo) {
+			// 缓存天气信息
+		    SharedPreferences.Editor editor = settings.edit();
+		    editor.putString(cityid+DAY, weatherInfo.toString());
+		    editor.putLong(cityid+DAY + "time", System.currentTimeMillis()/1000);
+		    editor.commit();
 		}
 
 		private String getJsonByUrl(String url) throws ClientProtocolException, IOException {
@@ -267,7 +276,7 @@ public class WeatherObj {
 		protected void onPostExecute(Boolean success) {
 			dialog.dismiss();
 			analysisData();
-			outTextView.setText(WeatherObj.this.toString());
+			fillListviewWithList(outTextView, WeatherObj.this.toStringArray());
 		}
 	
 		@Override
@@ -277,15 +286,11 @@ public class WeatherObj {
 		}
 	}
 
-	public void fillWeatherInfo(TextView outTextView, Boolean refresh) {
-		if (refresh || dayJsonObject == null || periodJsonObject == null ) {
-			WeatherAsync async = new WeatherAsync(context, outTextView);
-			async.refresh = true;
-			async.execute();
-		} else {
-			analysisData();
-			outTextView.setText(this.toString());
-		}
+	public boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getApplicationContext()
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager
+                .getActiveNetworkInfo();
+        return activeNetworkInfo != null;
 	}
-
 }

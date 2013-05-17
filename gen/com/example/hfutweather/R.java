@@ -26,21 +26,22 @@ public final class R {
     }
     public static final class id {
         public static final int EditText01=0x7f0a0000;
-        public static final int action_settings=0x7f0a000e;
-        public static final int add_city=0x7f0a000f;
-        public static final int alpha=0x7f0a000c;
+        public static final int action_settings=0x7f0a000f;
+        public static final int add_city=0x7f0a0010;
+        public static final int alpha=0x7f0a000d;
         public static final int cityLetterListView=0x7f0a0003;
         public static final int city_layout=0x7f0a0001;
         public static final int city_list=0x7f0a0002;
-        public static final int del_city=0x7f0a0010;
-        public static final int del_city_item=0x7f0a0009;
+        public static final int del_city=0x7f0a0011;
+        public static final int del_city_item=0x7f0a000a;
         public static final int info=0x7f0a0006;
-        public static final int informer=0x7f0a0007;
-        public static final int name=0x7f0a000d;
-        public static final int refresh=0x7f0a0008;
-        public static final int relocate=0x7f0a0011;
-        public static final int row_chbox=0x7f0a000a;
-        public static final int row_tv=0x7f0a000b;
+        public static final int informer=0x7f0a0008;
+        public static final int list=0x7f0a0007;
+        public static final int name=0x7f0a000e;
+        public static final int refresh=0x7f0a0009;
+        public static final int relocate=0x7f0a0012;
+        public static final int row_chbox=0x7f0a000b;
+        public static final int row_tv=0x7f0a000c;
         public static final int spinner=0x7f0a0005;
         public static final int submit=0x7f0a0004;
     }

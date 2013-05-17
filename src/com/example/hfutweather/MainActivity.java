@@ -1,25 +1,10 @@
 package com.example.hfutweather;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -28,9 +13,9 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.hfutweather.db.DBCity;
 
@@ -42,19 +27,14 @@ public class MainActivity extends Activity {
 	private int addCityCode = 1;
 	private int delCityCode = 2;
 	private CityOperate cityOperate;
+	private ListView listview;
 	
-	public boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) getApplicationContext()
-                .getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager
-                .getActiveNetworkInfo();
-        return activeNetworkInfo != null;
-	}
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		spinner = (Spinner)findViewById(R.id.spinner);
+		listview = (ListView) findViewById(R.id.info);
 
 		cityOperate = new CityOperate(MainActivity.this);
 		city = cityOperate.load();
@@ -63,7 +43,7 @@ public class MainActivity extends Activity {
 
 		WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
 				getCityNumByPosition(0));
-		weatherObj.fillWeatherInfo((TextView) findViewById(R.id.info), false);
+		weatherObj.fillWeatherInfo(listview, false);
 		find_and_modif_button();
 	}
 
@@ -77,7 +57,7 @@ public class MainActivity extends Activity {
 
 				WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
 						getCityNumByPosition(position));
-				weatherObj.fillWeatherInfo((TextView) findViewById(R.id.info), false);
+				weatherObj.fillWeatherInfo(listview, false);
 		    }
 
 		    @Override
@@ -96,14 +76,9 @@ public class MainActivity extends Activity {
 		
 		@Override
 		public void onClick(View v) {
-			if (isNetworkAvailable() == false) {
-				Toast.makeText(MainActivity.this, "Õ¯¬Á≤ªø…”√", Toast.LENGTH_SHORT).show();
-			}
-			else {
-				WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
-						getCityNumByPosition(spinner.getSelectedItemPosition()));
-				weatherObj.fillWeatherInfo((TextView) findViewById(R.id.info), true);
-			}
+			WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
+					getCityNumByPosition(spinner.getSelectedItemPosition()));
+			weatherObj.fillWeatherInfo(listview, true);
 		}
 	};
 	
