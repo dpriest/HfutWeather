@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,6 +21,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -26,9 +29,14 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.util.Log;
-import android.widget.ArrayAdapter;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.AdapterView.OnItemClickListener;
+
+import com.example.hfutweather.view.WeatherAdapter;
 
 
 public class WeatherObj {
@@ -48,9 +56,14 @@ public class WeatherObj {
 	private String cityid;
 	private int current_month;
 	private int current_day;
+	private ListView listview;
+	private TextView textview;
+	private List<HashMap<String, String>> arrayList;
 	
 	// 初始化数据
 	public WeatherObj(Activity context, String cityCode) {
+		textview = (TextView) context.findViewById(R.id.info);
+		listview = (ListView) context.findViewById(R.id.list);
 		this.context = context;
 		settings  = context.getSharedPreferences(PREFS_NAME, 0);
 		detailCache  = context.getSharedPreferences(cityCode+DETAIL_NAME, 0);
@@ -60,7 +73,7 @@ public class WeatherObj {
 		current_day = rightNow.get(Calendar.DAY_OF_MONTH);
 	}
 
-	public void fillWeatherInfo(ListView listview, Boolean refresh) {
+	public void fillWeatherInfo(Boolean refresh) {
 		String json1 = settings.getString(cityid + DAY, "");
 		String dateString = detailCache.getString("date", "");
 		if (!dateString.equals("")) {
@@ -73,36 +86,58 @@ public class WeatherObj {
 			e.printStackTrace();
 		}
 		if (isNetworkAvailable() == true && (refresh || dayJsonObject == null || date[0] == 0 )) {
-			WeatherAsync async = new WeatherAsync(context, listview);
+			WeatherAsync async = new WeatherAsync(context);
 			async.refresh = true;
 			async.execute();
 		} else if (dayJsonObject != null && date[0] != 0 ) {
 			analysisData();
-			fillListviewWithList(listview, this.toStringArray());
+			fillTextview(this.getTextData());
+			arrayList = this.getListData();
+			fillListviewWithList();
 		} else {
-			ArrayList<String> data = new ArrayList<String>();
-	        data.add("暂无数据");
-			fillListviewWithList(listview, data);
+	        fillTextview("暂无数据");
 			Toast.makeText(context, "网络不可用", Toast.LENGTH_SHORT).show();
 		}
 	}
 
-	private ArrayList<String> toStringArray() {
-		ArrayList<String> context = new ArrayList<String>();
+	private String getTextData() {
+		String context = "";
 		if (temperature == "") {
-			context.add("暂无数据");
+			context = "暂无数据";
 		} else {
-			context.add("当前温度:" + temperature + "°C");
-			context.add("更新时间:" + date[0] + "月" + date[1] + "日"+time);
+			context += "当前温度:" + temperature + "°C\n";
+			context += "更新时间:" + date[0] + "月" + date[1] + "日"+time;
+		}
+		return context;
+	}
+
+	private List<HashMap<String, String>> getListData() {
+		ArrayList<HashMap<String, String>> list = new ArrayList<HashMap<String, String>>();
+		if (date[0] != 0) {
 			JSONObject tempData;
 			// 从昨天开始
 			for(int i = -1; i <= 2; i++) {
+				HashMap<String, String> context = new HashMap<String, String>();
 				String tempString = detailCache.getString(current_month + "/" +(current_day+i), "");
+				String detail = "数据暂无";
 				try {
 					tempData = new JSONObject(tempString);
 					if (tempData != null) {
-						context.add(current_month + "月" + (current_day+i) + "日" 
-								+ tempData.get("weather") + tempData.get("temp"));
+						context.put("date", current_month + "月" + (current_day+i) + "日");
+						context.put("tvCondition", tempData.getString("weather"));
+						context.put("tvTemp", tempData.getString("temp"));
+						if (tempData.has("index")) {
+							detail = "穿衣指数：" + tempData.getString("index") + "\n"
+									+ tempData.getString("index_d") + "\n"
+									+ "紫外线：" + tempData.getString("index_uv") + "\n"
+									+ "洗车指数：" + tempData.getString("index_xc") + "\n"
+									+ "旅游指数：" + tempData.getString("index_tr") + "\n"
+									+ "舒适指数：" + tempData.getString("index_co") + "\n"
+									+ "晨练指数：" + tempData.getString("index_cl") + "\n"
+									+ "晾晒指数：" + tempData.getString("index_ls");
+						}
+						context.put("detail", detail);
+						list.add(context);
 					}
 				} catch (JSONException e) {
 					// TODO Auto-generated catch block
@@ -110,12 +145,38 @@ public class WeatherObj {
 				}
 			}
 		}
-		return context;
+		return list;
 	}
 
-	private void fillListviewWithList(ListView listview, ArrayList<String> arrayList) {
-		ArrayAdapter<String> adapter = new ArrayAdapter(context, android.R.layout.simple_list_item_1, arrayList);
+	private void fillTextview(String textData) {
+		textview.setText(textData);
+	}
+
+	private void fillListviewWithList() {
+		WeatherAdapter adapter = new WeatherAdapter(context, arrayList);
+//		ArrayList<String> singleList = new ArrayList<String>();
+//		for(HashMap<String, String>   it: arrayList )    {   
+//		       singleList.add(it.get("info"));
+//		   }
+//		ArrayAdapter<String> adapter = new ArrayAdapter(context, android.R.layout.simple_list_item_1, singleList);
 		listview.setAdapter(adapter);
+		listview.setOnItemClickListener(new OnItemClickListener() {
+
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view,
+					int position, long id) {
+				showInfo((String)arrayList.get(position).get("detail"));
+			}
+			
+		});
+	}
+
+	
+	protected void showInfo(String info) {
+		new AlertDialog.Builder(context)
+			.setTitle("详细信息")
+			.setMessage(info)
+			.show();
 	}
 
 	private void analysisData() {
@@ -172,11 +233,9 @@ public class WeatherObj {
 		public boolean refresh = false;
 		private ProgressDialog dialog;
 		private DefaultHttpClient client;
-		private ListView outTextView;
 	
-		public WeatherAsync(Activity activity, ListView listview) {
+		public WeatherAsync(Activity activity) {
 			dialog = new ProgressDialog(activity);
-			this.outTextView = listview;
 			dialog.setTitle("更新中");
 			dialog.setMessage("获取天气中...");
 		}
@@ -247,6 +306,25 @@ public class WeatherObj {
 					JSONObject tempData = new JSONObject();
 					tempData.put("weather", weatherInfo.getString("weather"+i).toString());
 					tempData.put("temp", weatherInfo.getString("temp"+i).toString());
+					tempData.put("wind", weatherInfo.getString("wind"+i).toString());
+					tempData.put("fl", weatherInfo.getString("fl"+i).toString());
+					if (i == 1) {
+						// 今天的穿衣指数
+						tempData.put("index", weatherInfo.getString("index").toString());
+						tempData.put("index_d", weatherInfo.getString("index_d").toString());
+						// 紫外指数
+						tempData.put("index_uv", weatherInfo.getString("index_uv").toString());
+						//洗车指数
+						tempData.put("index_xc", weatherInfo.getString("index_xc").toString());
+						//旅游指数
+						tempData.put("index_tr", weatherInfo.getString("index_tr").toString());
+						//舒适指数
+						tempData.put("index_co", weatherInfo.getString("index_co").toString());
+						//晨练指数
+						tempData.put("index_cl", weatherInfo.getString("index_cl").toString());
+						//晾晒指数
+						tempData.put("index_ls", weatherInfo.getString("index_ls").toString());
+					}
 					editor.putString(date[0] + "/" + (date[1] + i-1), tempData.toString());
 				}
 			} catch (JSONException e) {
@@ -276,7 +354,9 @@ public class WeatherObj {
 		protected void onPostExecute(Boolean success) {
 			dialog.dismiss();
 			analysisData();
-			fillListviewWithList(outTextView, WeatherObj.this.toStringArray());
+			fillTextview(WeatherObj.this.getTextData());
+			arrayList = WeatherObj.this.getListData();
+			fillListviewWithList();
 		}
 	
 		@Override

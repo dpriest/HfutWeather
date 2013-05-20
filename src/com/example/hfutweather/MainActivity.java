@@ -13,9 +13,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.Spinner;
-import android.widget.TextView;
 
 import com.example.hfutweather.db.DBCity;
 
@@ -27,14 +25,12 @@ public class MainActivity extends Activity {
 	private int addCityCode = 1;
 	private int delCityCode = 2;
 	private CityOperate cityOperate;
-	private ListView listview;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		spinner = (Spinner)findViewById(R.id.spinner);
-		listview = (ListView) findViewById(R.id.info);
 
 		cityOperate = new CityOperate(MainActivity.this);
 		city = cityOperate.load();
@@ -43,7 +39,7 @@ public class MainActivity extends Activity {
 
 		WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
 				getCityNumByPosition(0));
-		weatherObj.fillWeatherInfo(listview, false);
+		weatherObj.fillWeatherInfo(false);
 		find_and_modif_button();
 	}
 
@@ -57,7 +53,7 @@ public class MainActivity extends Activity {
 
 				WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
 						getCityNumByPosition(position));
-				weatherObj.fillWeatherInfo(listview, false);
+				weatherObj.fillWeatherInfo(false);
 		    }
 
 		    @Override
@@ -78,7 +74,7 @@ public class MainActivity extends Activity {
 		public void onClick(View v) {
 			WeatherObj weatherObj = new WeatherObj(MainActivity.this, 
 					getCityNumByPosition(spinner.getSelectedItemPosition()));
-			weatherObj.fillWeatherInfo(listview, true);
+			weatherObj.fillWeatherInfo(true);
 		}
 	};
 	
