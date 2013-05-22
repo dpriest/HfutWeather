@@ -126,6 +126,7 @@ public class WeatherObj {
 						context.put("date", current_month + "月" + (current_day+i) + "日");
 						context.put("tvCondition", tempData.getString("weather"));
 						context.put("tvTemp", tempData.getString("temp"));
+						context.put("img", tempData.getString("img"));
 						if (tempData.has("index")) {
 							detail = "穿衣指数：" + tempData.getString("index") + "\n"
 									+ tempData.getString("index_d") + "\n"
@@ -299,7 +300,6 @@ public class WeatherObj {
 				String yesterday = detailCache.getString(current_month + "/" +(current_day-1), "");
 				// 先清除缓存，防止缓存冗余
 				editor.clear();
-				editor.putString("date", weatherInfo.getString("date_y").toString());
 				editor.putString(current_month + "/" +(current_day-1), yesterday);
 				date = getMonthAndDay(weatherInfo.getString("date_y").toString());
 				for ( int i = 1; i <= 6; i++ ) {
@@ -308,6 +308,8 @@ public class WeatherObj {
 					tempData.put("temp", weatherInfo.getString("temp"+i).toString());
 					tempData.put("wind", weatherInfo.getString("wind"+i).toString());
 					tempData.put("fl", weatherInfo.getString("fl"+i).toString());
+					tempData.put("fl", weatherInfo.getString("fl"+i).toString());
+					tempData.put("img", weatherInfo.getString("img"+(i*2-1)).toString());
 					if (i == 1) {
 						// 今天的穿衣指数
 						tempData.put("index", weatherInfo.getString("index").toString());
@@ -339,6 +341,7 @@ public class WeatherObj {
 		    SharedPreferences.Editor editor = settings.edit();
 		    editor.putString(cityid+DAY, weatherInfo.toString());
 		    editor.putLong(cityid+DAY + "time", System.currentTimeMillis()/1000);
+			editor.putString("date", current_month + "月" + current_day + "日");
 		    editor.commit();
 		}
 

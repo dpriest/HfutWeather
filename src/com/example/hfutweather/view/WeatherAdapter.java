@@ -6,10 +6,12 @@ import java.util.Map;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.hfutweather.R;
@@ -44,10 +46,10 @@ public class WeatherAdapter extends BaseAdapter {
 	}
 	
 	public final class ViewHolder {
-		public TextView info;
 		public TextView date;
 		public TextView tvCondition;
 		public TextView tvTemp;
+		public ImageView tvWeatherImage;
 	}
 
 	@Override
@@ -59,6 +61,7 @@ public class WeatherAdapter extends BaseAdapter {
 			holder.date = (TextView)convertView.findViewById(R.id.date);
 			holder.tvCondition = (TextView)convertView.findViewById(R.id.tvCondition);
 			holder.tvTemp = (TextView)convertView.findViewById(R.id.tvTemp);
+			holder.tvWeatherImage =(ImageView)convertView.findViewById(R.id.list_image); // thumb image
 			convertView.setTag(holder);
 		} else {
 			holder = (ViewHolder)convertView.getTag();
@@ -66,6 +69,13 @@ public class WeatherAdapter extends BaseAdapter {
 		holder.date.setText((String)mData.get(position).get("date"));
 		holder.tvCondition.setText((String)mData.get(position).get("tvCondition"));
 		holder.tvTemp.setText((String)mData.get(position).get("tvTemp"));
+
+	    //Setting an image
+	    String uri = "drawable/img"+ mData.get(position).get("img");
+	    int imageResource = context.getApplicationContext().getResources().getIdentifier(uri, null, context.getApplicationContext().getPackageName());
+	    Drawable image = context.getResources().getDrawable(imageResource);
+	    holder.tvWeatherImage.setImageDrawable(image);
+		
 		return convertView;
 	}
 }
