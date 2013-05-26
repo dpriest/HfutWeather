@@ -13,10 +13,7 @@
         android:title="@string/del_city" />
 
     
-	    case R.id.relocate:
-	    	cityOperate.relocate();
-			city = cityOperate.load();
-	    	break;<item
+	<item
         android:id="@+id/relocate"
         android:orderInCategory="100"
         android:showAsAction="never"
