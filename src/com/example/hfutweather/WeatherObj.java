@@ -74,8 +74,9 @@ public class WeatherObj {
 	}
 
 	public void fillWeatherInfo(Boolean refresh) {
+		// 从当天缓存中读取数据
 		String json1 = settings.getString(cityid + DAY, "");
-		String dateString = detailCache.getString("date", "");
+		String dateString = settings.getString("date", "");
 		if (!dateString.equals("")) {
 			date = getMonthAndDay(dateString);
 		}
@@ -335,12 +336,13 @@ public class WeatherObj {
 			}
 		    editor.commit();
 		}
-
+		
 		private void cacheDirect(JSONObject weatherInfo) {
 			// 缓存天气信息
 		    SharedPreferences.Editor editor = settings.edit();
 		    editor.putString(cityid+DAY, weatherInfo.toString());
 		    editor.putLong(cityid+DAY + "time", System.currentTimeMillis()/1000);
+		    // 缓存更新时间
 			editor.putString("date", current_month + "月" + current_day + "日");
 		    editor.commit();
 		}

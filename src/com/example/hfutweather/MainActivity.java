@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -21,7 +20,6 @@ public class MainActivity extends Activity {
 	protected static final String TAG = "MainActivity";
 	private ArrayList<String> city = new ArrayList<String>();
 	private Spinner spinner;
-	private SharedPreferences settings = null;
 	private int addCityCode = 1;
 	private int delCityCode = 2;
 	private CityOperate cityOperate;
