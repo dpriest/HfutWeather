@@ -26,6 +26,7 @@ import com.example.hfutweather.db.DBCity;
 public class CityCache {
 	private static final String CITYFILENAME = "citys.txt";
 	private static final String LOCALCITYFILENAME = "localcitys.txt";
+	private static final String DEFAULTCITY = "±±¾©";
 	private Activity context;
 	
 	public CityCache(Activity context) {
@@ -47,7 +48,9 @@ public class CityCache {
 	public String readLocal() {
 		File file = context.getFileStreamPath(LOCALCITYFILENAME);
 		if(!file.exists()) {
-			refreshLocal();
+			if (refreshLocal() == null ) {
+				return DEFAULTCITY;
+			}
 		}
 		try {
 			FileInputStream input = context.openFileInput(LOCALCITYFILENAME);
@@ -61,11 +64,14 @@ public class CityCache {
 		} catch (IOException exc) {
 			exc.printStackTrace();
 		}
-		return "";
+		return DEFAULTCITY;
 	}
 	public String refreshLocal() {
 		String localCity = getLocation();
 		DBCity dbCity = new DBCity(context);
+		if (localCity == null) {
+			return null;
+		}
 		localCity = dbCity.getDatabaseName(localCity);
 		FileOutputStream output;
 		try {
